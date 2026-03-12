@@ -40,6 +40,8 @@
         }  
   </style>
 <script>
+const borderPoints = [...new Set(results.data.map(d => d.s_State))];
+const checkboxesDiv = document.getElementById('checkboxes');
 borderPoints.forEach(point => {
           const checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
