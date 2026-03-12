@@ -39,45 +39,126 @@
           border-radius: 5px;     
         }  
   </style>
+	
 <script>
-const borderPoints = [...new Set(results.data.map(d => d.s_State))];
-const checkboxesDiv = document.getElementById('checkboxes');
-borderPoints.forEach(point => {
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.id = point;
-          checkbox.value = point;
-          checkbox.checked = true;
-          checkbox.onchange = filterFlows;
+document.addEventListener('DOMContentLoaded', function() {
+  var map = L.map('map');
 
-          const label = document.createElement('label');
-          label.htmlFor = point;
-          label.appendChild(document.createTextNode(point));
+  if (L.Browser.mobile) {
+    map.setView([34.5, 66.0], 3);
+  } else {
+    map.setView([34.5, 66.0], 6);
+  }
 
-          checkboxesDiv.appendChild(checkbox);
-          checkboxesDiv.appendChild(label);
-          checkboxesDiv.appendChild(document.createElement('br'));
-        });
 
-        filterFlows();
-      }
-    });
+  // Make sure this is defined
+  let geoJsonFeatureCollection = {
+    type: "FeatureCollection",
+    features: [] // <-- fill this with your GeoJSON features
+  };
 
-    let oneToManyFlowmapLayer;
+  // Example results object
+  let results = {
+    data: geoJsonFeatureCollection.features.map(f => ({ s_State: f.properties.s_State }))
+  };
 
-    function filterFlows() {
-      const selectedPoints = Array.from(document.querySelectorAll('#checkboxes input[type="checkbox"]:checked')).map(cb => cb.value);
+  const borderPoints = [...new Set(results.data.map(d => d.s_State))];
+  const checkboxesDiv = document.getElementById('checkboxes');
 
-      const filteredFeatures = geoJsonFeatureCollection.features.filter(feature => selectedPoints.includes(feature.properties.s_State));
+  borderPoints.forEach(point => {
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = point;
+    checkbox.value = point;
+    checkbox.checked = true;
+    checkbox.onchange = filterFlows;
 
-      const filteredCollection = {
-        type: 'FeatureCollection',
-        features: filteredFeatures
-      };
+    const label = document.createElement('label');
+    label.htmlFor = point;
+    label.appendChild(document.createTextNode(point));
 
-      if (oneToManyFlowmapLayer) {
-        map.removeLayer(oneToManyFlowmapLayer);
-      }
+    checkboxesDiv.appendChild(checkbox);
+    checkboxesDiv.appendChild(label);
+    checkboxesDiv.appendChild(document.createElement('br'));
+  });
+
+  let oneToManyFlowmapLayer;
+
+  function filterFlows() {
+    const selectedPoints = Array.from(document.querySelectorAll('#checkboxes input[type="checkbox"]:checked')).map(cb => cb.value);
+
+    const filteredFeatures = geoJsonFeatureCollection.features.filter(feature => selectedPoints.includes(feature.properties.s_State));
+
+    const filteredCollection = {
+      type: 'FeatureCollection',
+      features: filteredFeatures
+    };
+
+    if (oneToManyFlowmapLayer) {
+      map.removeLayer(oneToManyFlowmapLayer);
+    }
+
+    oneToManyFlowmapLayer = L.canvasFlowmapLayer(filteredCollection, {
+      originAndDestinationFieldIds: {
+        originUniqueIdField: 's_state_id',
+        originGeometry: { x: 's_lon', y: 's_lat' },
+        destinationUniqueIdField: 'e_locality_id',
+        destinationGeometry: { x: 'e_lon', y: 'e_lat' }
+      },
+      style: function(geoJsonFeature) {
+        if (geoJsonFeature.properties.isOrigin) {
+          return { radius: 6, weight: 1, color: 'rgb(195, 255, 62)', fillColor: 'rgba(255, 103, 31)', fillOpacity: 0.8 };
+        } else {
+          return { radius: 4, weight: 0.25, color: 'rgb(17, 142, 170)', fillColor: 'rgb(0, 51, 160)', fillOpacity: 0.7 };
+        }
+      },
+      canvasBezierStyle: {
+        type: 'classBreaks',
+        field: 'e_Volume',
+        classBreakInfos: [
+          { classMinValue: 0, classMaxValue: 10000, symbol: { strokeStyle: '#ffb81c', lineWidth: 1, lineCap: 'round', shadowColor: '#fee8c8', shadowBlur: 2.0 } },
+          { classMinValue: 10001, classMaxValue: 50000, symbol: { strokeStyle: '#ff671f', lineWidth: 2, lineCap: 'round', shadowColor: '#fdbb84', shadowBlur: 2.0 } },
+          { classMinValue: 50001, classMaxValue: 10000000, symbol: { strokeStyle: '#d22630', lineWidth: 4, lineCap: 'round', shadowColor: '#e34a33', shadowBlur: 2.0 } }
+        ],
+        defaultSymbol: { strokeStyle: '#e7e1ef', lineWidth: 0.5, lineCap: 'round', shadowColor: '#e7e1ef', shadowBlur: 1.5 }
+      },
+      pathDisplayMode: 'all',
+      animationStarted: true,
+      animationEasingFamily: 'Linear',
+      animationEasingType: 'None',
+      animationDuration: 2000,
+      onEachFeature: TooltipName
+    }).addTo(map);
+  }
+
+  function TooltipName(feature, layer) {
+    layer.on('mouseover', function() { this.openPopup(); });
+    layer.on('mouseout', function() { this.closePopup(); });
+    if (layer._radius === 6) {
+      layer.bindTooltip("Border Point: " + feature.properties.s_State);
+    } else {
+      layer.bindTooltip("Province of Return: " + feature.properties.e_locality);
+    }
+  }
+
+  filterFlows();
+
+  var legend = L.control({ position: 'bottomleft' });
+  legend.onAdd = function(map) {
+    var div = L.DomUtil.create('div', 'legend');
+    div.innerHTML =
+      '<div style="width:17px;height:17px;background:rgba(255, 103, 31, 0.8) ;float:left;margin-right:10px;border-radius:30px"></div>' +
+      '<span style="float:left;margin-top:1px; font-weight:bold"> Border Point </span><br/><br/>' +
+      '<div style="width:17px;height:17px;background:rgba(0, 51, 160, 0.8) ;float:left;margin-right:10px;border-radius:30px"></div>' +
+      '<span style="float:left;margin-top:1px; font-weight:bold"> Province of Return </span><br/><br/>' +
+      '<span style="font-size: 14px"> Flow:</span><br/>' +
+      '<div style="width:70px;height:3px;background:#ffb81c ;float:left;margin-right:10px;margin-top:10px"></div><span style="float:left; font-weight:bold"> < 10,000</span><br/>' +
+      '<div style="width:70px;height:4px;background:#ff671f ;float:left;margin-right:10px;margin-top:10px"></div><span style="float:left; font-weight:bold">10,001 - 50,000</span><br/>' +
+      '<div style="width:70px;height:7px;background:#d22630 ;float:left;margin-right:10px;margin-top:10px"></div><span style="float:left; font-weight:bold"> > 50,000</span><br/>';
+    return div;
+  };
+  legend.addTo(map);
+});
 </script>
 </head>
 
