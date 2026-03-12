@@ -39,7 +39,44 @@
           border-radius: 5px;     
         }  
   </style>
+<script>
+borderPoints.forEach(point => {
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.id = point;
+          checkbox.value = point;
+          checkbox.checked = true;
+          checkbox.onchange = filterFlows;
 
+          const label = document.createElement('label');
+          label.htmlFor = point;
+          label.appendChild(document.createTextNode(point));
+
+          checkboxesDiv.appendChild(checkbox);
+          checkboxesDiv.appendChild(label);
+          checkboxesDiv.appendChild(document.createElement('br'));
+        });
+
+        filterFlows();
+      }
+    });
+
+    let oneToManyFlowmapLayer;
+
+    function filterFlows() {
+      const selectedPoints = Array.from(document.querySelectorAll('#checkboxes input[type="checkbox"]:checked')).map(cb => cb.value);
+
+      const filteredFeatures = geoJsonFeatureCollection.features.filter(feature => selectedPoints.includes(feature.properties.s_State));
+
+      const filteredCollection = {
+        type: 'FeatureCollection',
+        features: filteredFeatures
+      };
+
+      if (oneToManyFlowmapLayer) {
+        map.removeLayer(oneToManyFlowmapLayer);
+      }
+</script>
 </head>
 
 <body>
