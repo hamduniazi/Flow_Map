@@ -40,107 +40,15 @@
         }  
   </style>
 	
-<script>
 
-var map = L.map('map', {
-  center: [34.5, 66.0],
-  zoom: 6,
-  minZoom: 5,
-  maxZoom: 10
-});
-L.esri.basemapLayer('Gray').addTo(map);
-
-// Load admin layers
-L.esri.featureLayer({ url: "...MapServer/2", where:"ADMLEVEL=1", style:{color:"gray",weight:1,dashArray:"2,3"} }).addTo(map);
-L.esri.featureLayer({ url: "...MapServer/2", where:"ADMLEVEL=2", style:{color:"gray",weight:0.25} }).addTo(map);
-
-var geoJsonFeatureCollection;  // global so both functions can access
-var oneToManyFlowmapLayer;     // global
-
-Papa.parse('data.csv', {
-  download: true,
-  header: true,
-  dynamicTyping: true,
-  skipEmptyLines: true,
-  complete: function(results) {
-    geoJsonFeatureCollection = {
-      type: 'FeatureCollection',
-      features: results.data.map(function(d) {
-        return { type:'Feature', geometry:{type:'Point',coordinates:[d.s_lon,d.s_lat]}, properties:d };
-      })
-    };
-
-    // Populate checkboxes dynamically
-    const borderPoints = [...new Set(results.data.map(d => d.s_State))];
-    const checkboxesDiv = document.getElementById('checkboxes');
-    checkboxesDiv.innerHTML = '';  // clear any pre-existing checkboxes
-    borderPoints.forEach(point => {
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.id = point;
-      checkbox.value = point;
-      checkbox.checked = true;
-      checkbox.onchange = filterFlows;
-
-      const label = document.createElement('label');
-      label.htmlFor = point;
-      label.appendChild(document.createTextNode(point));
-
-      checkboxesDiv.appendChild(checkbox);
-      checkboxesDiv.appendChild(label);
-      checkboxesDiv.appendChild(document.createElement('br'));
-    });
-
-    // create the layer initially
-    filterFlows();
-  }
-});
-
-function filterFlows() {
-  const selectedPoints = Array.from(document.querySelectorAll('#checkboxes input[type="checkbox"]:checked')).map(cb => cb.value);
-
-  const filteredFeatures = geoJsonFeatureCollection.features.filter(f => selectedPoints.includes(f.properties.s_State));
-  const filteredCollection = { type:'FeatureCollection', features: filteredFeatures };
-
-  if (oneToManyFlowmapLayer) { map.removeLayer(oneToManyFlowmapLayer); }
-
-  oneToManyFlowmapLayer = L.canvasFlowmapLayer(filteredCollection, {
-    originAndDestinationFieldIds: {
-      originUniqueIdField: 's_state_id',
-      originGeometry: {x:'s_lon', y:'s_lat'},
-      destinationUniqueIdField: 'e_locality_id',
-      destinationGeometry: {x:'e_lon', y:'e_lat'}
-    },
-    style: function(f) {
-      return f.properties.isOrigin
-        ? { radius:6, weight:1, color:'rgb(195,255,62)', fillColor:'rgba(255,103,31)', fillOpacity:0.8 }
-        : { radius:3, weight:0.25, color:'rgb(17,142,170)', fillColor:'rgb(0,51,160)', fillOpacity:0.7 };
-    },
-    canvasBezierStyle: { /* your class breaks */ },
-    pathDisplayMode:'selection',
-    animationStarted:true,
-    animationEasingFamily:'Linear',
-    animationEasingType:'None',
-    animationDuration:2000,
-    onEachFeature: TooltipName
-  }).addTo(map);
-}
-
-function TooltipName(feature, layer) {
-  layer.on('mouseover', function(){ this.openPopup(); });
-  layer.on('mouseout', function(){ this.closePopup(); });
-  if(layer._radius===6) layer.bindTooltip("State of Origin: " + feature.properties.s_State);
-  else layer.bindTooltip("Locality of Displacement: " + feature.properties.e_locality);
-}
-</script>
 </head>
 
 <body>
 
-  <div id="map"></div>
+<div id="map"></div>
 <div id="controls">
 <h4>Select Border Points</h4>
-<div id="checkboxes"><input type="checkbox" id="Abu Nasr Farahi" value="Abu Nasr Farahi"><label for="Abu Nasr Farahi">Abu Nasr Farahi</label><br><input type="checkbox" id="Angor ada" value="Angor ada"><label for="Angor ada">Angor ada</label><br><input type="checkbox" id="Bahramcha" value="Bahramcha"><label for="Bahramcha">Bahramcha</label><br><input type="checkbox" id="DAK" value="DAK"><label for="DAK">DAK</label><br><input type="checkbox" id="Ghulam Khan" value="Ghulam Khan"><label for="Ghulam Khan">Ghulam Khan</label><br><input type="checkbox" id="Islam Qala - Taybad" value="Islam Qala - Taybad"><label for="Islam Qala - Taybad">Islam Qala - Taybad</label><br><input type="checkbox" id="Pathan" value="Pathan"><label for="Pathan">Pathan</label><br><input type="checkbox" id="Spin Boldak –  Chaman" value="Spin Boldak –  Chaman"><label for="Spin Boldak –  Chaman">Spin Boldak –  Chaman</label><br><input type="checkbox" id="Torkham – Bab-i-Pakistan" value="Torkham – Bab-i-Pakistan"><label for="Torkham – Bab-i-Pakistan">Torkham – Bab-i-Pakistan</label><br><input type="checkbox" id="Zaranj – Milak" value="Zaranj – Milak"><label for="Zaranj – Milak">Zaranj – Milak</label><br></div>
+<div id="checkboxes">
 </div>
   <!-- first load LeafletJS -->
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
